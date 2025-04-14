@@ -16,7 +16,7 @@ import base64
 sys.path.append(str(pathlib.Path(__file__).parent.parent / "scripts"))
 from graphology_features import extract_graphology_features
 
-# Background image utilities
+# Background with blur and black overlay
 def get_base64_of_bin_file(bin_file_path):
     with open(bin_file_path, 'rb') as f:
         data = f.read()
@@ -27,16 +27,48 @@ def set_background(image_file_path):
     page_bg_img = f"""
     <style>
     .stApp {{
-        background-image: url("data:image/png;base64,{bin_str}");
+        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), 
+                    url("data:image/png;base64,{bin_str}") no-repeat center center fixed;
         background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
+        backdrop-filter: blur(5px);
+    }}
+    .block-container {{
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }}
+    h1, h2, h3, h4, h5, h6, p, div, span {{
+        color: #f5f5f5 !important;
+        font-family: 'Segoe UI', sans-serif !important;
+    }}
+    .trait-score {{
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 8px;
+        border-radius: 8px;
+        color: white !important;
+    }}
+    .centered-title {{
+        text-align: center;
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }}
+    .stTextInput > div > input {{
+        background-color: #ffffffcc;
+        color: #000;
+    }}
+    .stFileUploader {{
+        background-color: #ffffffcc;
+        border-radius: 8px;
+        padding: 0.5rem;
     }}
     </style>
     """
     st.markdown(page_bg_img, unsafe_allow_html=True)
 
-# Traits and descriptions
+# Traits
 traits = ["Agreeableness", "Conscientiousness", "Extraversion", "Neuroticism", "Openness"]
 
 trait_descriptions = {
@@ -161,15 +193,12 @@ bg_path = pathlib.Path("E:/SideProject/project_root/bg/image.jpg")
 set_background(str(bg_path))
 
 st.markdown("""
-    <style>
-        .block-container { padding-top: 2rem; }
-        .trait-score { font-size: 20px; font-weight: 600; color: black; }
-        h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, .stDataFrame, .stImage, .css-1cpxqw2, .css-ffhzg2 { color: black !important; }
-    </style>
+    <div class="centered-title" style="font-size: 42px; text-align: center; margin-bottom: 0.2rem;">
+        🧠 Personality Predictor from Handwriting (Hybrid)
+    </div>
+    <p style='text-align: center; font-size: 18px; margin-top: -0.5rem;'>Upload a handwriting image to analyze personality using both AI and Graphology.</p>
 """, unsafe_allow_html=True)
 
-st.markdown("<h1>🧠 Personality Predictor from Handwriting (Hybrid)</h1>", unsafe_allow_html=True)
-st.markdown("<p style='color: black;'>Upload a handwriting image to analyze personality using both AI and Graphology.</p>", unsafe_allow_html=True)
 
 name = st.text_input("Enter your name")
 uploaded_file = st.file_uploader("Upload Handwriting Image", type=["jpg", "jpeg", "png"])
@@ -211,9 +240,7 @@ if uploaded_file:
 
             pdf_path = generate_pdf(name, temp_img_path, pred_trait, scores, graph_features, fun_paragraph)
 
-        st.markdown(f"<h3 style='color: black;'>CNN Prediction</h3>", unsafe_allow_html=True)
-        
-        # 🎯 Custom styled CNN prediction box
+        st.markdown(f"<h3>CNN Prediction</h3>", unsafe_allow_html=True)
         st.markdown(
             f"""
             <div style='
@@ -233,7 +260,7 @@ if uploaded_file:
             unsafe_allow_html=True
         )
 
-        st.markdown(f"<h3 style='color: black;'>Personality Trait Scores</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3>Personality Trait Scores</h3>", unsafe_allow_html=True)
         col1, col2 = st.columns([1, 1])
 
         for i, t in enumerate(traits):
@@ -244,15 +271,15 @@ if uploaded_file:
                 with col2:
                     st.markdown(f"<div class='trait-score'>{t}: {round(scores[i]*100)}%</div>", unsafe_allow_html=True)
 
-        st.markdown(f"<h3 style='color: black;'>Graphology Features</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3>Graphology Features</h3>", unsafe_allow_html=True)
         for item in graph_features:
             st.markdown(
-                f"<p style='color: black;'>- <b>{item['Attribute']}</b>: {item['Writing Category']} -> {item['Psychological Personality Behavior']}</p>",
+                f"<p>- <b>{item['Attribute']}</b>: {item['Writing Category']} -> {item['Psychological Personality Behavior']}</p>",
                 unsafe_allow_html=True
             )
 
-        st.markdown(f"<h3 style='color: black;'>Personality Snapshot</h3>", unsafe_allow_html=True)
-        st.markdown(f"<p style='color: black;'>{fun_paragraph}</p>", unsafe_allow_html=True)
+        st.markdown(f"<h3>Personality Snapshot</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p>{fun_paragraph}</p>", unsafe_allow_html=True)
 
         with open(pdf_path, "rb") as f:
             st.download_button(
