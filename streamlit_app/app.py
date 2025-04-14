@@ -1,5 +1,3 @@
-# streamlit_app/app.py
-
 import streamlit as st
 from PIL import Image
 import torch
@@ -9,16 +7,47 @@ import numpy as np
 import os
 import sys
 import pathlib
+from fpdf import FPDF
+import tempfile
+import plotly.graph_objects as go
+import base64
 
 # Add scripts folder to import path
 sys.path.append(str(pathlib.Path(__file__).parent.parent / "scripts"))
+from scripts.graphology_features import extract_graphology_features
 
-from graphology_features import extract_graphology_features
+# Background image utilities
+def get_base64_of_bin_file(bin_file_path):
+    with open(bin_file_path, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
 
-# Trait labels
+def set_background(image_file_path):
+    bin_str = get_base64_of_bin_file(image_file_path)
+    page_bg_img = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/png;base64,{bin_str}");
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }}
+    </style>
+    """
+    st.markdown(page_bg_img, unsafe_allow_html=True)
+
+# Traits and descriptions
 traits = ["Agreeableness", "Conscientiousness", "Extraversion", "Neuroticism", "Openness"]
 
-# CNN model architecture
+trait_descriptions = {
+    "Agreeableness": "You tend to be compassionate, cooperative, and value getting along with others.",
+    "Conscientiousness": "You are responsible, organized, and strive for achievement with strong impulse control.",
+    "Extraversion": "You enjoy being around people, are full of energy, and often experience positive emotions.",
+    "Neuroticism": "You may experience emotional instability, moodiness, and irritability.",
+    "Openness": "You are imaginative, curious, and open to new experiences and ideas."
+}
+
+# CNN Model
 class PersonalityCNN(nn.Module):
     def __init__(self):
         super().__init__()
@@ -46,7 +75,6 @@ class PersonalityCNN(nn.Module):
         x = self.fc_layer(x)
         return x
 
-# Load the trained CNN model
 @st.cache_resource
 def load_model():
     model = PersonalityCNN()
@@ -55,7 +83,6 @@ def load_model():
     model.eval()
     return model
 
-# Predict personality using CNN
 def predict_cnn(image, model):
     transform = transforms.Compose([
         transforms.Grayscale(),
@@ -70,72 +97,167 @@ def predict_cnn(image, model):
         predicted = np.argmax(probs)
     return traits[predicted], probs
 
-# Generate reasoning from graphology features
-def interpret_graphology(features):
-    reasoning = []
-    if features["Letter Size"] == "Small":
-        reasoning.append("Small letters → Focused → Conscientiousness ↑")
-    elif features["Letter Size"] == "Large":
-        reasoning.append("Large letters → Expressive → Extraversion ↑")
+def create_gauge_chart(trait, value):
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=value * 100,
+        title={'text': trait},
+        gauge={
+            'axis': {'range': [0, 100]},
+            'bar': {'color': "mediumseagreen"},
+            'steps': [
+                {'range': [0, 50], 'color': "#ffe6e6"},
+                {'range': [50, 75], 'color': "#ffffcc"},
+                {'range': [75, 100], 'color': "#e6ffe6"},
+            ]
+        }
+    ))
+    fig.update_layout(height=250, margin=dict(t=0, b=0, l=0, r=0))
+    return fig
 
-    if features["Letter Slant"] == "Right":
-        reasoning.append("Right slant → Sociable → Extraversion ↑")
-    elif features["Letter Slant"] == "Left":
-        reasoning.append("Left slant → Reserved → Introversion ↑")
+def generate_pdf(name, image_path, pred_trait, scores, graph_features, fun_paragraph):
+    def clean_text(text):
+        return text.replace("→", "->").replace("—", "-").encode("latin1", "replace").decode("latin1")
 
-    if features["Baseline"] == "Rising":
-        reasoning.append("Rising baseline → Optimism → Openness ↑")
-    elif features["Baseline"] == "Falling":
-        reasoning.append("Falling baseline → Fatigue → Neuroticism ↑")
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, clean_text("Personality Analysis Report"), ln=True)
 
-    if features["Pen Pressure"] == "Heavy":
-        reasoning.append("Heavy pressure → Determined → Conscientiousness ↑")
-    elif features["Pen Pressure"] == "Light":
-        reasoning.append("Light pressure → Sensitive → Agreeableness ↑")
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 10, clean_text(f"Name: {name}"), ln=True)
+    pdf.cell(0, 10, clean_text("Uploaded Handwriting Sample:"), ln=True)
+    pdf.image(image_path, w=100)
 
-    if features["Word Spacing"] == "Wide":
-        reasoning.append("Wide spacing → Independent → Openness ↑")
-    elif features["Word Spacing"] == "Narrow":
-        reasoning.append("Narrow spacing → Close relationships → Agreeableness ↑")
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, clean_text("CNN Prediction"), ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.cell(0, 10, clean_text(f"Predicted Trait: {pred_trait}"), ln=True)
 
-    return reasoning
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, clean_text("Graphology Features"), ln=True)
+    pdf.set_font("Arial", "", 12)
+    for item in graph_features:
+        feature = clean_text(item["Attribute"])
+        category = clean_text(item["Writing Category"])
+        behavior = clean_text(item["Psychological Personality Behavior"])
+        pdf.multi_cell(0, 8, f"- {feature}: {category} -> {behavior}")
 
-# Streamlit UI
-st.set_page_config(page_title="🧠 Hybrid Personality Predictor", layout="centered")
-st.title("🧠 Personality Predictor from Handwriting (Hybrid)")
-st.write("Upload a handwriting image to analyze personality using both AI and Graphology.")
+    pdf.ln(5)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, clean_text("Personality Snapshot"), ln=True)
+    pdf.set_font("Arial", "", 12)
+    pdf.multi_cell(0, 8, clean_text(fun_paragraph))
 
-uploaded_file = st.file_uploader("📄 Upload Handwriting Image", type=["jpg", "jpeg", "png"])
+    pdf_path = os.path.join(tempfile.gettempdir(), "personality_report.pdf")
+    pdf.output(pdf_path)
+    return pdf_path
+
+# UI
+st.set_page_config(page_title="Hybrid Personality Predictor", layout="centered")
+bg_path = pathlib.Path("E:/SideProject/project_root/bg/image/parchment.jpg")  
+set_background(str(bg_path))
+
+st.markdown("""
+    <style>
+        .block-container { padding-top: 2rem; }
+        .trait-score { font-size: 20px; font-weight: 600; color: black; }
+        h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, .stDataFrame, .stImage, .css-1cpxqw2, .css-ffhzg2 { color: black !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("<h1>🧠 Personality Predictor from Handwriting (Hybrid)</h1>", unsafe_allow_html=True)
+st.markdown("<p style='color: black;'>Upload a handwriting image to analyze personality using both AI and Graphology.</p>", unsafe_allow_html=True)
+
+name = st.text_input("Enter your name")
+uploaded_file = st.file_uploader("Upload Handwriting Image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert("L")
-    st.image(image, caption="🖼️ Uploaded Sample", use_column_width=True)
+    st.image(image, caption="Uploaded Sample", use_column_width=True)
 
-    if st.button("🔍 Analyze Personality"):
-        with st.spinner("Running hybrid analysis..."):
-
-            # Load model and run prediction
+    if st.button("Analyze Personality"):
+        with st.spinner("Running analysis..."):
             model = load_model()
             pred_trait, scores = predict_cnn(image, model)
-
-            # Extract graphology features and reasoning
             graph_features = extract_graphology_features(uploaded_file)
-            reasoning = interpret_graphology(graph_features)
 
-        # Display results
-        st.subheader("🔮 CNN Prediction")
-        st.success(f"**Predicted Trait:** {pred_trait}")
-        st.write("📊 Confidence Scores:")
+            traits_summary = [item['Psychological Personality Behavior']
+                              for item in graph_features
+                              if item['Psychological Personality Behavior'] != "Insufficient data to determine"]
+
+            highlighted_traits = sorted(zip(traits, scores), key=lambda x: x[1], reverse=True)[:2]
+            top_traits_desc = ". ".join([
+                f"Your {trait.lower()} score suggests that {trait_descriptions[trait]}"
+                for trait, _ in highlighted_traits
+            ])
+
+            if traits_summary:
+                fun_paragraph = (
+                    f"Hey {name}! ✨ Based on your handwriting analysis, you exhibit traits like "
+                    f"{', '.join(t.lower() for t in traits_summary[:-1])}"
+                    f"{', and ' + traits_summary[-1].lower() if len(traits_summary) > 1 else ''}.\n\n"
+                    f"From a CNN perspective, you show strong alignment with traits like "
+                    f"{highlighted_traits[0][0]} and {highlighted_traits[1][0]}. {top_traits_desc}.\n\n"
+                    f"Altogether, this paints a vibrant and multi-dimensional picture of who you are! 🖌️"
+                )
+            else:
+                fun_paragraph = f"{name}, we couldn't gather enough from your writing to make a full personality profile."
+
+            temp_img_path = os.path.join(tempfile.gettempdir(), "uploaded_image.png")
+            image.save(temp_img_path)
+
+            pdf_path = generate_pdf(name, temp_img_path, pred_trait, scores, graph_features, fun_paragraph)
+
+        st.markdown(f"<h3 style='color: black;'>CNN Prediction</h3>", unsafe_allow_html=True)
+        
+        # 🎯 Custom styled CNN prediction box
+        st.markdown(
+            f"""
+            <div style='
+                background-color:#e0f0ff;
+                color:#003366;
+                padding:15px;
+                border-radius:10px;
+                border: 2px solid #003366;
+                font-size:18px;
+                font-weight:bold;
+                text-align:center;
+                margin-bottom:20px;
+            '>
+                🧠 <b>Predicted Trait:</b> {pred_trait}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown(f"<h3 style='color: black;'>Personality Trait Scores</h3>", unsafe_allow_html=True)
+        col1, col2 = st.columns([1, 1])
+
         for i, t in enumerate(traits):
-            st.write(f"- {t}: {scores[i]*100:.2f}%")
+            if t == pred_trait:
+                with col1:
+                    st.plotly_chart(create_gauge_chart(t, scores[i]), use_container_width=True)
+            else:
+                with col2:
+                    st.markdown(f"<div class='trait-score'>{t}: {round(scores[i]*100)}%</div>", unsafe_allow_html=True)
 
-        st.subheader("🧠 Graphology Features")
-        for k, v in graph_features.items():
-            st.write(f"- {k}: {v}")
+        st.markdown(f"<h3 style='color: black;'>Graphology Features</h3>", unsafe_allow_html=True)
+        for item in graph_features:
+            st.markdown(
+                f"<p style='color: black;'>- <b>{item['Attribute']}</b>: {item['Writing Category']} -> {item['Psychological Personality Behavior']}</p>",
+                unsafe_allow_html=True
+            )
 
-        st.subheader("💡 Interpretation from Handwriting")
-        if reasoning:
-            for r in reasoning:
-                st.write(f"✔️ {r}")
-        else:
-            st.write("⚠️ Not enough features to interpret handwriting.")
+        st.markdown(f"<h3 style='color: black;'>Personality Snapshot</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color: black;'>{fun_paragraph}</p>", unsafe_allow_html=True)
+
+        with open(pdf_path, "rb") as f:
+            st.download_button(
+                label="📄 Download Full Report (PDF)",
+                data=f,
+                file_name=f"{name}_Personality_Report.pdf",
+                mime="application/pdf"
+            )
