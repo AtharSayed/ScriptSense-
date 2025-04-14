@@ -27,12 +27,6 @@ def map_to_behavior(feature, value):
             "Falling": "Tired, overwhelmed, pessimistic, not hopeful",
             "Straight": "Determined, stays on track, self-motivated, controls emotions, reliable, steady",
             "Unknown": "Insufficient data to determine"
-        },
-        "Word Spacing": {
-            "Wide": "Desires more space, enjoys privacy",
-            "Narrow": "Closeness of sentiment and intelligence",
-            "Normal": "Balanced spacing",
-            "Unknown": "Insufficient data to determine"
         }
     }
     return mapping.get(feature, {}).get(value, "Unknown")
@@ -173,7 +167,6 @@ def extract_graphology_features(image_path):
             "Letter Slant": detect_letter_slant(binary),
             "Pen Pressure": detect_pen_pressure(gray),
             "Baseline": detect_baseline(binary),
-            "Word Spacing": detect_word_spacing(binary),
         }
         
         output = []
@@ -194,4 +187,4 @@ def extract_graphology_features(image_path):
             "Attribute": feat,
             "Writing Category": "Unknown",
             "Psychological Personality Behavior": "Insufficient data to determine"
-        } for feat in ["Letter Size", "Letter Slant", "Pen Pressure", "Baseline", "Word Spacing"]]
+        } for feat in ["Letter Size", "Letter Slant", "Pen Pressure", "Baseline"]]
