@@ -14,7 +14,7 @@ import base64
 
 # Add scripts folder to import path
 sys.path.append(str(pathlib.Path(__file__).parent.parent / "scripts"))
-from scripts.graphology_features import extract_graphology_features
+from graphology_features import extract_graphology_features
 
 # Background image utilities
 def get_base64_of_bin_file(bin_file_path):
@@ -157,7 +157,7 @@ def generate_pdf(name, image_path, pred_trait, scores, graph_features, fun_parag
 
 # UI
 st.set_page_config(page_title="Hybrid Personality Predictor", layout="centered")
-bg_path = pathlib.Path("E:/SideProject/project_root/bg/image/parchment.jpg")  
+bg_path = pathlib.Path("E:/SideProject/project_root/bg/image.jpg")  
 set_background(str(bg_path))
 
 st.markdown("""
