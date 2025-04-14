@@ -244,21 +244,21 @@ if uploaded_file:
         st.markdown(
             f"""
             <div style='
-                background-color:#e0f0ff;
-                color:#003366;
-                padding:15px;
-                border-radius:10px;
-                border: 2px solid #003366;
-                font-size:18px;
-                font-weight:bold;
-                text-align:center;
-                margin-bottom:20px;
-            '>
-                🧠 <b>Predicted Trait:</b> {pred_trait}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+              background-color: rgba(255, 255, 255, 0.1);
+              color: #ffffff;
+              padding: 15px;
+              border-radius: 10px;
+              font-size: 18px;
+              font-weight: bold;
+              text-align: center;
+              margin-bottom: 20px;
+              font-family: "Segoe UI", sans-serif;
+    '>
+        🧠 <b>Predicted Trait:</b> {pred_trait}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
         st.markdown(f"<h3>Personality Trait Scores</h3>", unsafe_allow_html=True)
         col1, col2 = st.columns([1, 1])
