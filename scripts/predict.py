@@ -1,5 +1,3 @@
-# scripts/predictor.py
-
 import sys
 import os
 from PIL import Image
@@ -69,40 +67,43 @@ def cnn_predict(image_path, model_path='models/personality_cnn.pth'):
     return traits[pred_idx], probs
 
 # Rule-based graphology interpretation
-def interpret_graphology(features):
-    reasoning = []
+def interpret_graphology(feature_dicts):
+    reasoning = {}
 
-    if features["Letter Size"] == "Small":
-        reasoning.append("Small letters → Focused → Conscientiousness ↑")
-    elif features["Letter Size"] == "Large":
-        reasoning.append("Large letters → Expressive → Extraversion ↑")
+    # Convert list of dicts to plain dict for easier access
+    features = {f["Attribute"]: f["Writing Category"] for f in feature_dicts}
 
-    if features["Letter Slant"] == "Right":
-        reasoning.append("Right slant → Sociable → Extraversion ↑")
-    elif features["Letter Slant"] == "Left":
-        reasoning.append("Left slant → Reserved → Introversion ↑")
+    if features.get("Letter Size") == "Small":
+        reasoning["Conscientiousness"] = "Small letters → Focused → Conscientiousness ↑"
+    elif features.get("Letter Size") == "Large":
+        reasoning["Extraversion"] = "Large letters → Expressive → Extraversion ↑"
 
-    if features["Baseline"] == "Rising":
-        reasoning.append("Rising baseline → Optimism → Openness ↑")
-    elif features["Baseline"] == "Falling":
-        reasoning.append("Falling baseline → Fatigue/Low mood → Neuroticism ↑")
+    if features.get("Letter Slant") == "Right":
+        reasoning["Extraversion_2"] = "Right slant → Sociable → Extraversion ↑"
+    elif features.get("Letter Slant") == "Left":
+        reasoning["Introversion"] = "Left slant → Reserved → Introversion ↑"
 
-    if features["Pen Pressure"] == "Heavy":
-        reasoning.append("Heavy pressure → Determined → Conscientiousness ↑")
-    elif features["Pen Pressure"] == "Light":
-        reasoning.append("Light pressure → Sensitive → Agreeableness ↑")
+    if features.get("Baseline") == "Rising":
+        reasoning["Openness"] = "Rising baseline → Optimism → Openness ↑"
+    elif features.get("Baseline") == "Falling":
+        reasoning["Neuroticism"] = "Falling baseline → Fatigue/Low mood → Neuroticism ↑"
 
-    if features["Word Spacing"] == "Wide":
-        reasoning.append("Wide spacing → Independent → Openness ↑")
-    elif features["Word Spacing"] == "Narrow":
-        reasoning.append("Narrow spacing → Need for closeness → Agreeableness ↑")
+    if features.get("Pen Pressure") == "Heavy":
+        reasoning["Conscientiousness_2"] = "Heavy pressure → Determined → Conscientiousness ↑"
+    elif features.get("Pen Pressure") == "Light":
+        reasoning["Agreeableness"] = "Light pressure → Sensitive → Agreeableness ↑"
 
-    return reasoning
+    if features.get("Word Spacing") == "Wide":
+        reasoning["Openness_2"] = "Wide spacing → Independent → Openness ↑"
+    elif features.get("Word Spacing") == "Narrow":
+        reasoning["Agreeableness_2"] = "Narrow spacing → Need for closeness → Agreeableness ↑"
+
+    return list(reasoning.values())
 
 # 🔁 Main
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python predictor.py path_to_image.jpg")
+        print("Usage: python predict.py path_to_image.jpg")
         sys.exit(1)
 
     image_path = sys.argv[1]
@@ -122,8 +123,8 @@ if __name__ == "__main__":
     # 2. Graphology Analysis
     print("\n📎 Graphology-Based Features:")
     features = extract_graphology_features(image_path)
-    for k, v in features.items():
-        print(f"  {k}: {v}")
+    for feat in features:
+        print(f"  {feat['Attribute']}: {feat['Writing Category']} → {feat['Psychological Personality Behavior']}")
 
     # 3. Reasoning
     print("\n💡 Interpretation Based on Graphology:")
