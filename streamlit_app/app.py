@@ -51,18 +51,22 @@ def set_background(image_file_path):
     }}
     .centered-title {{
         text-align: center;
-        font-size: 28px;
+        font-size: 42px;
         font-weight: bold;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.2rem;
     }}
     .stTextInput > div > input {{
         background-color: #ffffffcc;
         color: #000;
     }}
     .stFileUploader {{
-        background-color: #ffffffcc;
-        border-radius: 8px;
-        padding: 0.5rem;
+        background-color: rgba(255, 255, 255, 0.2) !important;
+        color: black !important;
+        border-radius: 10px;
+        padding: 1rem;
+        font-weight: 500;
+        font-size: 15px;
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
     }}
     </style>
     """
@@ -193,12 +197,11 @@ bg_path = pathlib.Path("E:/SideProject/project_root/bg/image.jpg")
 set_background(str(bg_path))
 
 st.markdown("""
-    <div class="centered-title" style="font-size: 42px; text-align: center; margin-bottom: 0.2rem;">
+    <div class="centered-title">
         🧠 Personality Predictor from Handwriting (Hybrid)
     </div>
     <p style='text-align: center; font-size: 18px; margin-top: -0.5rem;'>Upload a handwriting image to analyze personality using both AI and Graphology.</p>
 """, unsafe_allow_html=True)
-
 
 name = st.text_input("Enter your name")
 uploaded_file = st.file_uploader("Upload Handwriting Image", type=["jpg", "jpeg", "png"])
@@ -253,12 +256,12 @@ if uploaded_file:
               text-align: center;
               margin-bottom: 20px;
               font-family: "Segoe UI", sans-serif;
-    '>
-        🧠 <b>Predicted Trait:</b> {pred_trait}
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            '>
+                🧠 Predicted Trait: {pred_trait}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         st.markdown(f"<h3>Personality Trait Scores</h3>", unsafe_allow_html=True)
         col1, col2 = st.columns([1, 1])
