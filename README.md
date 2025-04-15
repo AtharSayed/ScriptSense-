@@ -14,6 +14,18 @@ Given an image of handwriting, the system:
 4. 🔀 Combines both predictions into a hybrid interpretation.
 5. 📊 Displays results with confidence scores and trait-wise insights.
 
+## 🛠 Tech Stack
+
+The project leverages the following technologies:
+
+- 🐍 **Python 3.9** – Core programming language
+- 🧠 **TensorFlow / Keras** – For CNN model development and inference
+- 🖼 **OpenCV** – For image preprocessing and feature extraction
+- 🌐 **Streamlit** – Web interface for uploading images and displaying results
+- 📊 **Matplotlib**, **Seaborn**, **Plotly** – For trait visualization and embedding plots
+
+---
+
 ## 🚀 How to Run
 
 ### 1. Clone the Repo
